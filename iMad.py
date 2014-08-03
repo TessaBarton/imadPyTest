@@ -21,8 +21,10 @@ import numpy as np
 from scipy import linalg, stats
 from osgeo import gdal
 from osgeo.gdalconst import GA_ReadOnly, GDT_Float32
+from numpy.ctypeslib import ndpointer
 import os, sys,time
 import ctypes
+import scipy.linalg
 lib = ctypes.cdll.LoadLibrary('/testbed/CRCPython/libprov_means.so')
 provmeans = lib.provmeans
 provmeans.restype = None
@@ -35,14 +37,42 @@ provmeans.argtypes = [ndpointer(np.float64),
                       ndpointer(np.float64),
                       ndpointer(np.float64)]
 
+# provisional means                                                             
+# -----------------                                                             
 
+class Cpm(object):
+    '''Provisional means algorithm'''
+    def __init__(self,N):
+        self.mn = np.zeros(N)
+        self.cov = np.zeros((N,N))
+        self.sw = 0.0000001
+
+    def update(self,Xs,Ws=None):
+        n,N = np.shape(Xs)
+        if Ws is None:
+            Ws = np.ones(n)
+        sw = ctypes.c_double(self.sw)
+        mn = self.mn
+        cov = self.cov
+        provmeans(Xs,Ws,N,n,ctypes.byref(sw),mn,cov)
+        self.sw = sw.value
+        self.mn = mn
+        self.cov = cov
+
+    def covariance(self):
+        c = np.mat(self.cov/(self.sw-1.0))
+        d = np.diag(np.diag(c))
+        return c + c.T - d
+
+    def means(self):
+        return self.mn
 def main():
     gdal.AllRegister()
-    path = auxil.select_directory('Choose working directory')
+    path = '/testbed/testimages/imgs'
     if path:
         os.chdir(path)
 #  first image
-    file1 = auxil.select_infile(title='Choose first image')
+    file1 = '/testbed/testimages/imgs/img1.tif'
     if file1:
         inDataset1 = gdal.Open(file1,GA_ReadOnly)
         cols = inDataset1.RasterXSize
@@ -50,16 +80,16 @@ def main():
         bands = inDataset1.RasterCount
     else:
         return
-    pos1 =  auxil.select_pos(bands)
+    pos1 = [1,2,3,4,5]
     if not pos1:
         return
-    dims = auxil.select_dims([0,0,cols,rows])
+    dims = (0,0,7801,6961)
     if dims:
         x10,y10,cols1,rows1 = dims
     else:
         return
 #  second image
-    file2 = auxil.select_infile(title='Choose second image')
+    file2 = '/testbed/testimages/imgs/img1.tif'
     if file2:
         inDataset2 = gdal.Open(file2,GA_ReadOnly)
         cols = inDataset2.RasterXSize
@@ -67,20 +97,20 @@ def main():
         bands = inDataset2.RasterCount
     else:
         return
-    pos2 =  auxil.select_pos(bands)
+    pos2 =  [1,2,3,4,5]
     if not pos2:
         return
-    dims=auxil.select_dims([0,0,cols,rows])
+    dims=(0,0,7801,6961)
     if dims:
         x20,y20,cols,rows = dims
     else:
         return
 #  penalization
-    lam = auxil.select_penal(0.0)
+    lam = 0.0
     if lam is None:
         return
 #  outfile
-    outfile, fmt = auxil.select_outfilefmt()
+    outfile, fmt = '/testbed/pyout','GTiff'
     if not outfile:
         return
 #  match dimensions
@@ -96,7 +126,7 @@ def main():
     print 'time2: '+file2
     print 'Delta    [canonical correlations]'
 #  iteration of MAD
-    cpm = auxil.Cpm(2*bands)
+    cpm = Cpm(2*bands)
     delta = 1.0
     oldrho = np.zeros(bands)
     itr = 0
@@ -145,8 +175,8 @@ def main():
         b2 = s22
 #     solution of generalized eigenproblems
         if bands>1:
-            mu2a,A = auxil.geneiv(c1,b1)
-            mu2b,B = auxil.geneiv(c2,b2)
+            mu2a,A = scipy.linalg.eigh(c1,b1)
+            mu2b,B = scipy.linalg.eigh(c2,b2)
 #          sort a
             idx = np.argsort(mu2a)
             A = A[:,idx]
