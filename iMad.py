@@ -25,7 +25,7 @@ from numpy.ctypeslib import ndpointer
 import os, sys,time
 import ctypes
 import scipy.linalg
-lib = ctypes.cdll.LoadLibrary('/testbed/CRCPython/libprov_means.so')
+lib = ctypes.cdll.LoadLibrary('/Users/Tessa/Desktop/imad/CRCPython/libprov_means.so')
 provmeans = lib.provmeans
 provmeans.restype = None
 c_double_p = ctypes.POINTER(ctypes.c_double)
@@ -68,11 +68,11 @@ class Cpm(object):
         return self.mn
 def main():
     gdal.AllRegister()
-    path = '/testbed/testimages/imgs'
+    path = '/Users/Tessa/Desktop/imad/CRCPython/'
     if path:
         os.chdir(path)
 #  first image
-    file1 = '/testbed/testimages/imgs/img1.tif'
+    file1 = 'tjpeg.tif'
     if file1:
         inDataset1 = gdal.Open(file1,GA_ReadOnly)
         cols = inDataset1.RasterXSize
@@ -80,7 +80,7 @@ def main():
         bands = inDataset1.RasterCount
     else:
         return
-    pos1 = [1,2,3,4,5]
+    pos1 = [1,2,3]
     if not pos1:
         return
     dims = (0,0,7801,6961)
@@ -89,7 +89,7 @@ def main():
     else:
         return
 #  second image
-    file2 = '/testbed/testimages/imgs/img1.tif'
+    file2 = 'tjpeg.tif'
     if file2:
         inDataset2 = gdal.Open(file2,GA_ReadOnly)
         cols = inDataset2.RasterXSize
@@ -97,7 +97,7 @@ def main():
         bands = inDataset2.RasterCount
     else:
         return
-    pos2 =  [1,2,3,4,5]
+    pos2 =  [1,2,3]
     if not pos2:
         return
     dims=(0,0,7801,6961)
@@ -110,7 +110,7 @@ def main():
     if lam is None:
         return
 #  outfile
-    outfile, fmt = '/testbed/pyout','GTiff'
+    outfile, fmt = '/Desktop/imad/imadTestPy/pyout','GTiff'
     if not outfile:
         return
 #  match dimensions
